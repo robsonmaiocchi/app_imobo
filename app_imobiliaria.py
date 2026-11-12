@@ -436,9 +436,9 @@ st.markdown("""
     /* Responsividade Mobile Refinada */
     @media (max-width: 768px) {
         .block-container {
-            padding-top: 0.8rem !important;
-            padding-left: 0.6rem !important;
-            padding-right: 0.6rem !important;
+            padding-top: 3.2rem !important; /* Desce o cartão azul para não cortar o 'Olá, Pâmela' */
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
         }
         .top-bar {
             padding: 14px 16px;
