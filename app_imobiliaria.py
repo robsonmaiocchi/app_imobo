@@ -399,6 +399,54 @@ st.markdown("""
         display: inline-block;
         margin-bottom: 4px;
     }
+
+    /* =========================================================
+       OTIMIZAÇÃO RESPONSIVA PARA CELULAR (TELAS ATÉ 768px)
+       ========================================================= */
+    @media (max-width: 768px) {
+        /* Reduz a margem desperdiçada no topo e nas laterais */
+        .block-container {
+            padding-top: 1.8rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+        /* Título principal (h1) proporcional no celular */
+        h1 {
+            font-size: 1.35rem !important;
+            line-height: 1.25 !important;
+            margin-bottom: 0.3rem !important;
+        }
+        /* Subtítulos (h2 e h3) compactos */
+        h2, h3 {
+            font-size: 1.05rem !important;
+            line-height: 1.3 !important;
+            margin-top: 0.4rem !important;
+        }
+        /* Textos explicativos e parágrafos mais limpos */
+        p, li, .stMarkdown {
+            font-size: 0.88rem !important;
+            line-height: 1.4 !important;
+        }
+        /* Abas compactas para caberem melhor na barra horizontal */
+        button[data-baseweb="tab"] p {
+            font-size: 0.80rem !important;
+        }
+        /* Botões sem cortar texto ("...Atualizar Ka...") */
+        .stButton > button {
+            font-size: 0.82rem !important;
+            padding: 0.4rem 0.6rem !important;
+            white-space: normal !important;
+            height: auto !important;
+            min-height: 2.5rem !important;
+        }
+        /* Métricas de orçamento mais enxutas */
+        [data-testid="stMetricValue"] {
+            font-size: 1.15rem !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 0.78rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -518,11 +566,11 @@ st.title("🎧 Auto-CRM Imobiliário: O WhatsApp Alimenta o Kanban Sozinho")
 st.caption("Protótipo personalizado com os casos reais de Curitiba (Gaia Cabral, Hera Botânica, Permuta de 2.2M e Áudio de 1.8M) + Imbituba.")
 
 aba_escuta, aba_kanban, aba_chat, aba_match, aba_roi = st.tabs([
-    "🎧 1. Escuta do WhatsApp ➔ Auto-CRM",
-    "📋 2. Kanban Automático (Estilo Trello)",
-    "💬 3. Super-Dory 24/7 (Caso Rose 888k ➔ 350k)",
-    "🎯 4. Oferta Ativa Anti-Bloqueio",
-    "📈 5. Seu Dashboard & Gestão"
+    "🎧 1. Auto-CRM",
+    "📋 2. Kanban",
+    "💬 3. Super-Dory",
+    "🎯 4. Match Ativo",
+    "📈 5. Gestão"
 ])
 
 # ---------------------------------------------------------------------
