@@ -279,7 +279,7 @@ class MensagemReativacao(BaseModel):
     motivo_do_match: str = Field(description="Explicação curta do match.")
 
 # =====================================================================
-# 4. DESIGN SYSTEM PREMIUM (MODO CLEAN SAAS IGUAL A APP DE IPHONE)
+# 4. DESIGN SYSTEM PREMIUM (MODO CLEAN SAAS + RESPONSIVIDADE MOBILE)
 # =====================================================================
 st.set_page_config(page_title="Pâmela Maioki | Smart CRM", page_icon="✨", layout="wide")
 
@@ -295,17 +295,15 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* Esconde menus técnicos do Streamlit para parecer App Nativo */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
     .block-container {
-        padding-top: 1.2rem !important;
+        padding-top: 2.2rem !important;
         padding-bottom: 2rem !important;
         max-width: 1280px !important;
     }
 
-    /* Header Estilo App Imobiliário Clean (Azul Royal & Branco) */
     .top-bar {
         background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
         color: white;
@@ -324,11 +322,13 @@ st.markdown("""
         font-weight: 700;
         margin: 0;
         letter-spacing: -0.02em;
+        color: #ffffff !important;
     }
     .top-bar-sub {
         font-size: 0.82rem;
-        opacity: 0.9;
+        opacity: 0.92;
         margin: 2px 0 0 0;
+        color: #e2e8f0 !important;
     }
     .status-pill {
         background: rgba(255, 255, 255, 0.18);
@@ -341,7 +341,6 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.25);
     }
 
-    /* Cartões Clean Flutuantes */
     .clean-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -361,7 +360,6 @@ st.markdown("""
         color: #0f172a;
     }
 
-    /* Alertas Elegantes */
     .banner-atraso {
         background: #fef2f2;
         border: 1px solid #fecaca;
@@ -377,13 +375,12 @@ st.markdown("""
         border: 1px solid #fde68a;
         border-left: 5px solid #d97706;
         color: #92400e;
-        padding: 12px 14px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        font-size: 0.86rem;
+        padding: 10px 14px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        font-size: 0.84rem;
     }
 
-    /* Pílulas de Informação */
     .pill-gray {
         background: #f1f5f9;
         color: #334155;
@@ -415,7 +412,6 @@ st.markdown("""
         margin: 2px 4px 2px 0;
     }
 
-    /* Abas Estilo Pílula Moderna */
     button[data-baseweb="tab"] {
         border-radius: 10px !important;
         padding: 8px 14px !important;
@@ -426,19 +422,18 @@ st.markdown("""
         font-size: 0.86rem !important;
     }
 
-    /* Botões Arredondados */
     .stButton > button {
         border-radius: 10px !important;
         font-weight: 600 !important;
         transition: all 0.15s ease-in-out !important;
     }
 
-    /* Responsividade Mobile Refinada */
+    /* Responsividade Mobile Refinada (Sem cortar o topo!) */
     @media (max-width: 768px) {
         .block-container {
-            padding-top: 3.2rem !important; /* Desce o cartão azul para não cortar o 'Olá, Pâmela' */
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
+            padding-top: 3.4rem !important;
+            padding-left: 0.7rem !important;
+            padding-right: 0.7rem !important;
         }
         .top-bar {
             padding: 14px 16px;
@@ -447,8 +442,8 @@ st.markdown("""
         .top-bar-title {
             font-size: 1.05rem;
         }
-        h2, h3 {
-            font-size: 1rem !important;
+        h2, h3, h5 {
+            font-size: 0.98rem !important;
         }
         .stButton > button {
             font-size: 0.80rem !important;
@@ -540,15 +535,16 @@ def analisar_conversa_whatsapp_espelhada(dialogo_texto: str, arquivo_audio, chav
 # =====================================================================
 # 6. CABEÇALHO CLEAN E NAVEGAÇÃO
 # =====================================================================
-st.markdown("""
-<div class="top-bar">
-    <div>
-        <p class="top-bar-title">Olá, Pâmela Maioki 👋</p>
-        <p class="top-bar-sub">Seu Copiloto & Funil Automático • Paulo Celles Imóveis</p>
-    </div>
-    <div class="status-pill">🟢 WhatsApp Conectado • Tempo Resposta: 2s</div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    "<div class='top-bar'>"
+    "<div>"
+    "<p class='top-bar-title'>Olá, Pâmela Maioki 👋</p>"
+    "<p class='top-bar-sub'>Seu Copiloto & Funil Automático • Paulo Celles Imóveis</p>"
+    "</div>"
+    "<div class='status-pill'>🟢 WhatsApp Conectado • Tempo Resposta: 2s</div>"
+    "</div>",
+    unsafe_allow_html=True
+)
 
 aba_escuta, aba_kanban, aba_chat, aba_match, aba_roi = st.tabs([
     "✨ 1. Auto-CRM",
@@ -559,7 +555,7 @@ aba_escuta, aba_kanban, aba_chat, aba_match, aba_roi = st.tabs([
 ])
 
 # ---------------------------------------------------------------------
-# ABA 1: AUTO-CRM CLEAN
+# ABA 1: AUTO-CRM CLEAN (HTML BLINDADO SEM RECUO)
 # ---------------------------------------------------------------------
 with aba_escuta:
     col_in, col_out = st.columns([1, 1.15], gap="large")
@@ -625,52 +621,56 @@ with aba_escuta:
                 proibidos_html = f"<span class='pill-red'>🚫 Não oferecer: {', '.join(esc.bairros_descartados)}</span>"
 
             mostrados_html = "".join([f"<span class='pill-gray'>👁️ Já viu: {m}</span>" for m in esc.imoveis_ja_mostrados_pelo_corretor])
+            bairros_busca = ", ".join(esc.bairros_interesse) if esc.bairros_interesse else "Aberto"
 
-            st.markdown(f"""
-            <div class="clean-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-size:1.1rem; font-weight:700;">👤 {esc.nome_cliente}</span>
-                    {badge_temperatura(esc.temperatura_lead)}
-                </div>
-                <div style="font-size:0.82rem; color:#64748b; margin-bottom:12px;">
-                    📱 {esc.telefone_cliente} &nbsp;•&nbsp; ⏳ <strong>{esc.prazo_urgencia_compra}</strong> &nbsp;•&nbsp; 📌 Funil: <strong>{esc.coluna_kanban_automatica}</strong>
-                </div>
-                {permuta_html}
-                <div style="display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
-                    <span class="pill-blue">💰 Teto: {formatar_moeda_br(esc.orcamento_identificado)}</span>
-                    <span class="pill-blue">📍 Busca: {', '.join(esc.bairros_interesse) if esc.bairros_interesse else 'Aberto'}</span>
-                    {proibidos_html}
-                </div>
-                <div style="margin-bottom:10px;">{mostrados_html}</div>
-                <div style="background:#f8fafc; padding:10px 12px; border-radius:10px; font-size:0.85rem; color:#334155;">
-                    📝 <strong>Resumo:</strong> {esc.resumo_do_que_conversaram}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            html_ficha_aba1 = (
+                f"<div class='clean-card'>"
+                f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>"
+                f"<span style='font-size:1.05rem; font-weight:700;'>👤 {esc.nome_cliente}</span>"
+                f"{badge_temperatura(esc.temperatura_lead)}"
+                f"</div>"
+                f"<div style='font-size:0.80rem; color:#64748b; margin-bottom:10px;'>"
+                f"📱 {esc.telefone_cliente} &nbsp;•&nbsp; ⏳ <strong>{esc.prazo_urgencia_compra}</strong> &nbsp;•&nbsp; 📌 Funil: <strong>{esc.coluna_kanban_automatica}</strong>"
+                f"</div>"
+                f"{permuta_html}"
+                f"<div style='margin-bottom:8px;'>"
+                f"<span class='pill-blue'>💰 Teto: {formatar_moeda_br(esc.orcamento_identificado)}</span>"
+                f"<span class='pill-blue'>📍 Busca: {bairros_busca}</span>"
+                f"{proibidos_html}"
+                f"</div>"
+                f"<div style='margin-bottom:10px;'>{mostrados_html}</div>"
+                f"<div style='background:#f8fafc; padding:10px 12px; border-radius:10px; font-size:0.84rem; color:#334155;'>"
+                f"📝 <strong>Resumo:</strong> {esc.resumo_do_que_conversaram}"
+                f"</div>"
+                f"</div>"
+            )
+            st.markdown(html_ficha_aba1, unsafe_allow_html=True)
 
             imoveis_cat = carregar_imoveis()
             for sug in esc.imoveis_sugeridos_do_catalogo:
                 im_d = next((i for i in imoveis_cat if i["codigo"] == sug.codigo_imovel), None)
                 tit = f"{im_d['titulo']} ({formatar_moeda_br(im_d['valor'])})" if im_d else sug.codigo_imovel
-                st.markdown(f"""
-                <div class="clean-card-match">
-                    <strong>🎯 Sugestão da IA: ID {sug.codigo_imovel} — {tit}</strong>
-                    <span style="float:right; color:#2563eb; font-weight:700; font-size:0.82rem;">{sug.compatibilidade_percentual}% Match</span><br>
-                    <span style="font-size:0.82rem; color:#475569;">💡 {sug.motivo_para_mostrar_agora}</span>
-                </div>
-                """, unsafe_allow_html=True)
+                html_sug = (
+                    f"<div class='clean-card-match'>"
+                    f"<strong>🎯 Sugestão da IA: ID {sug.codigo_imovel} — {tit}</strong>"
+                    f"<span style='float:right; color:#2563eb; font-weight:700; font-size:0.80rem;'>{sug.compatibilidade_percentual}% Match</span><br>"
+                    f"<span style='font-size:0.82rem; color:#475569;'>💡 {sug.motivo_para_mostrar_agora}</span>"
+                    f"</div>"
+                )
+                st.markdown(html_sug, unsafe_allow_html=True)
 
             st.markdown("**📲 Mensagem Pronta c/ Gatilho *'Faz sentido?'* (Toque para copiar):**")
             st.code(esc.sugestao_proxima_resposta_corretor, language=None)
         else:
-            st.markdown("""
-            <div class="clean-card" style="text-align:center; padding:32px 16px; color:#64748b;">
-                👈 Toque em <strong>🏡 Ana Rosset (2.2M)</strong> ou <strong>🎙️ Áudio (1.8M Dez)</strong> e clique no botão azul para ver o card limpo e a resposta com o gatilho <em>"Faz sentido?"</em>.
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                "<div class='clean-card' style='text-align:center; padding:28px 16px; color:#64748b;'>"
+                "👈 Toque em <strong>🏡 Ana Rosset (2.2M)</strong> ou <strong>🎙️ Áudio (1.8M Dez)</strong> e clique no botão azul para ver o card limpo e a resposta com o gatilho <em>'Faz sentido?'</em>."
+                "</div>",
+                unsafe_allow_html=True
+            )
 
 # ---------------------------------------------------------------------
-# ABA 2: FUNIL KANBAN CLEAN
+# ABA 2: FUNIL KANBAN CLEAN (HTML BLINDADO SEM CAIXAS DE CÓDIGO)
 # ---------------------------------------------------------------------
 with aba_kanban:
     leads_totais = carregar_leads()
@@ -701,36 +701,37 @@ with aba_kanban:
 
     if retornos_vencidos:
         nomes_v = ", ".join([f"{r['nome']} ({r['data_retorno']})" for r in retornos_vencidos])
-        st.markdown(f"""
-        <div class="banner-atraso">
-            🔔 <strong>Lembrete de Retornos Pendentes:</strong> {nomes_v}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='banner-atraso'>🔔 <strong>Lembrete de Retornos Pendentes:</strong> {nomes_v}</div>",
+            unsafe_allow_html=True
+        )
 
     k1, k2, k3, k4 = st.columns(4, gap="medium")
 
     def desenhar_card_kanban(item: dict):
         proib = f"<span class='pill-red'>🚫 {item['bairros_descartados']}</span>" if item.get("bairros_descartados") not in [None, "", "Nenhum"] else ""
-        perm = f"<div style='font-size:0.75rem; color:#b45309; background:#fef3c7; padding:4px 8px; border-radius:6px; margin:4px 0;'>🔄 {item['oportunidade_permuta_captacao']}</div>" if item.get("oportunidade_permuta_captacao") not in [None, "", "Não possui", "Compra direta"] else ""
-        st.markdown(f"""
-        <div class="clean-card" style="padding:14px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="font-size:0.95rem;">{item['nome']}</strong>
-                {badge_temperatura(item['temperatura'])}
-            </div>
-            <div style="font-size:0.76rem; color:#64748b; margin:4px 0 8px 0;">📱 {item['telefone']} • 📅 {item.get('data_retorno')}</div>
-            <div style="margin-bottom:6px;">
-                <span class="pill-blue">💰 {formatar_moeda_br(item['orcamento_max'])}</span>
-                <span class="pill-gray">📍 {item['bairros_interesse']}</span>
-                {proib}
-            </div>
-            {perm}
-            <div style="font-size:0.76rem; color:#334155; margin-top:6px;">
-                👁️ <strong>Viu:</strong> {item.get('imoveis_ja_mostrados')}<br>
-                🎯 <strong>Sugerido:</strong> <span style="color:#1d4ed8; font-weight:600;">{item.get('imoveis_sugeridos_ia')}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        perm = f"<div style='font-size:0.75rem; color:#b45309; background:#fef3c7; padding:5px 8px; border-radius:6px; margin:5px 0;'>🔄 {item['oportunidade_permuta_captacao']}</div>" if item.get("oportunidade_permuta_captacao") not in [None, "", "Não possui", "Compra direta"] else ""
+        
+        html_card = (
+            f"<div class='clean-card' style='padding:14px;'>"
+            f"<div style='display:flex; justify-content:space-between; align-items:center;'>"
+            f"<strong style='font-size:0.95rem;'>{item['nome']}</strong>"
+            f"{badge_temperatura(item['temperatura'])}"
+            f"</div>"
+            f"<div style='font-size:0.76rem; color:#64748b; margin:4px 0 8px 0;'>📱 {item['telefone']} • 📅 {item.get('data_retorno')}</div>"
+            f"<div style='margin-bottom:6px;'>"
+            f"<span class='pill-blue'>💰 {formatar_moeda_br(item['orcamento_max'])}</span>"
+            f"<span class='pill-gray'>📍 {item['bairros_interesse']}</span>"
+            f"{proib}"
+            f"</div>"
+            f"{perm}"
+            f"<div style='font-size:0.76rem; color:#334155; margin-top:6px; line-height:1.45;'>"
+            f"👁️ <strong>Viu:</strong> {item.get('imoveis_ja_mostrados')}<br>"
+            f"🎯 <strong>Sugerido:</strong> <span style='color:#1d4ed8; font-weight:600;'>{item.get('imoveis_sugeridos_ia')}</span>"
+            f"</div>"
+            f"</div>"
+        )
+        st.markdown(html_card, unsafe_allow_html=True)
 
     with k1:
         st.markdown(f"##### 📥 Novos ({len(col_novos)})")
@@ -828,12 +829,13 @@ with aba_match:
         bairro_proibido = any(b.strip() in imovel_alvo["cidade_bairro"].lower() for b in descartados_lead.split(",") if len(b.strip()) > 2 and b.strip() != "nenhum")
         orc_ok = (lead_m["orcamento_max"] is None) or (lead_m["orcamento_max"] * 1.25 >= imovel_alvo["valor"] and lead_m["orcamento_max"] * 0.4 <= imovel_alvo["valor"])
         if orc_ok and not bairro_proibido:
-            st.markdown(f"""
-            <div class="clean-card">
-                <strong>👤 {lead_m['nome']}</strong> {badge_temperatura(lead_m['temperatura'])}<br>
-                <span style="font-size:0.82rem; color:#475569;">💰 Teto: {formatar_moeda_br(lead_m['orcamento_max'])} • 👁️ Já viu: {lead_m.get('imoveis_ja_mostrados')}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            html_match_card = (
+                f"<div class='clean-card'>"
+                f"<strong>👤 {lead_m['nome']}</strong> {badge_temperatura(lead_m['temperatura'])}<br>"
+                f"<span style='font-size:0.82rem; color:#475569;'>💰 Teto: {formatar_moeda_br(lead_m['orcamento_max'])} • 👁️ Já viu: {lead_m.get('imoveis_ja_mostrados')}</span>"
+                f"</div>"
+            )
+            st.markdown(html_match_card, unsafe_allow_html=True)
             if st.button(f"📲 Gerar abordagem p/ {lead_m['nome']}", key=f"m_{lead_m['id']}"):
                 p_sis = "Crie uma mensagem curta de WhatsApp ofertando este imóvel e termine obrigatoriamente perguntando 'Faz sentido para você?'."
                 p_usr = f"Cliente: {json.dumps(lead_m, ensure_ascii=False)} | Imóvel: {json.dumps(imovel_alvo, ensure_ascii=False)}"
