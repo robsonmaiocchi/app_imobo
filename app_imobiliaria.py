@@ -11,9 +11,9 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 # =====================================================================
-# 1. BANCO DE DADOS (SQLite v6 - Clean UI & Regra "Faz Sentido?")
+# 1. BANCO DE DADOS E CONFIGURAÇÃO (SQLite v7 - Enterprise CRM)
 # =====================================================================
-DB_FILE = "crm_imobiliaria_v6.db"
+DB_FILE = "crm_imobiliaria_v7.db"
 CHAVE_EMBARCADA = "COLE_SUA_CHAVE_AIzaSy_AQUI"
 
 IMOVEIS_INICIAIS = [
@@ -98,12 +98,19 @@ LEADS_EXEMPLO = [
      "Avalia 2 aptos de 3Q no Gaia Cabral mediante permuta/venda de sua casa de R$ 2,2M. Não quer Cristo Rei.",
      "ATENDIMENTO", datetime.now().strftime("%Y-%m-%d %H:%M"), "WhatsApp", "Hoje às 17:00"),
     
-    ("Rose Miguel", "(49) 98503-3656", "MORNO", 350000.0, "Curitiba", "Nenhum",
+    ("Denise Morais De Oliveira", "(41) 99196-9521", "MORNO", 888800.0, "Cristo Rei", "Nenhum",
+     "Não possui", "Médio prazo",
+     "8094 - Hera Botânica",
+     "8094 (Decorado disponível)",
+     "Veio do Instagram interessada no Hera Botânica (ID 8094). Avaliando visita ao decorado.",
+     "NOVOS", datetime.now().strftime("%Y-%m-%d %H:%M"), "Instagram", "Hoje às 18:30"),
+
+    ("Rose Miguel", "(49) 98503-3656", "FRIO", 350000.0, "Curitiba", "Nenhum",
      "Não possui", "Médio prazo",
      "8094 - Hera Botânica (Acima do bolso)",
      "CTBA-350 (Parque das Araucárias - R$ 345k)",
      "Veio do anúncio do Hera (888k), mas tem R$ 350 mil. IA já separou opção de R$ 345k.",
-     "REENGAJAR", "2026-10-14 14:00", "Instagram", "14/10 (ATRASADO)"),
+     "REENGAJAR", "2026-10-14 14:00", "Facebook Ads", "14/10 (ATRASADO)"),
     
     ("Cliente Alto Padrão (Áudio)", "(41) 99888-5544", "QUENTE", 1800000.0, "Cabral, Juvevê", "Nenhum",
      "Compra direta", "Urgente (Até Dezembro)",
@@ -205,31 +212,48 @@ def mover_card_kanban(lead_id: int, nova_coluna: str, nova_temp: Optional[str] =
     c = conn.cursor()
     agora = datetime.now().strftime("%Y-%m-%d %H:%M")
     if nova_temp:
-        c.execute("UPDATE leads SET coluna_kanban=?, temperatura=?, ultima_interacao=?, data_retorno='Hoje' WHERE id=?", (nova_coluna, nova_temp, agora, lead_id))
+        c.execute("UPDATE leads SET coluna_kanban=?, temperatura=?, ultima_interacao=?, data_retorno='Atualizado Hoje' WHERE id=?", (nova_coluna, nova_temp, agora, lead_id))
     else:
         c.execute("UPDATE leads SET coluna_kanban=?, ultima_interacao=? WHERE id=?", (nova_coluna, agora, lead_id))
     conn.commit()
     conn.close()
 
 # =====================================================================
-# 2. UTILITÁRIOS VISUAIS
+# 2. UTILITÁRIOS VISUAIS PADRÃO PIPEDRIVE / HUBSPOT / CONVERTA+
 # =====================================================================
 def formatar_moeda_br(valor: Optional[float]) -> str:
-    if valor is None:
+    if valor is None or valor == 0:
         return "A definir"
     return f"R$ {valor:,.0f}".replace(",", ".")
+
+def formatar_vgv_curto(valor: float) -> str:
+    if valor >= 1_000_000:
+        return f"R$ {valor/1_000_000:.2f}M".replace(".", ",")
+    if valor >= 1_000:
+        return f"R$ {valor/1_000:.0f}k"
+    return f"R$ {valor:.0f}"
+
+def cor_borda_temperatura(temp: str) -> str:
+    t = (temp or "NEUTRO").upper()
+    return {
+        "QUENTE": "#ef4444",
+        "MORNO": "#f97316",
+        "FRIO": "#0ea5e9",
+        "CONGELADO": "#3b82f6",
+        "NEUTRO": "#94a3b8",
+    }.get(t, "#94a3b8")
 
 def badge_temperatura(temp: str) -> str:
     t = (temp or "NEUTRO").upper()
     cores = {
-        "QUENTE": ("#fee2e2", "#dc2626", "🔴 Quente"),
-        "MORNO": ("#ffedd5", "#ea580c", "🟠 Morno"),
-        "FRIO": ("#e0f2fe", "#0284c7", "🩵 Frio"),
-        "CONGELADO": ("#dbeafe", "#1d4ed8", "🔵 Congelado"),
-        "NEUTRO": ("#f1f5f9", "#475569", "⚪ Neutro"),
+        "QUENTE": ("#fef2f2", "#dc2626", "🔴 Quente"),
+        "MORNO": ("#fff7ed", "#ea580c", "🟠 Morno"),
+        "FRIO": ("#f0f9ff", "#0284c7", "🩵 Frio"),
+        "CONGELADO": ("#eff6ff", "#1d4ed8", "🔵 Congelado"),
+        "NEUTRO": ("#f8fafc", "#475569", "⚪ Neutro"),
     }
-    bg, txt, label = cores.get(t, ("#f1f5f9", "#475569", f"⚪ {t}"))
-    return f"<span style='background:{bg}; color:{txt}; padding:3px 10px; border-radius:99px; font-weight:600; font-size:0.78rem;'>{label}</span>"
+    bg, txt, label = cores.get(t, ("#f8fafc", "#475569", f"⚪ {t}"))
+    return f"<span style='background:{bg}; color:{txt}; border:1px solid {txt}33; padding:2px 8px; border-radius:99px; font-weight:600; font-size:0.72rem;'>{label}</span>"
 
 def sanitizar_markdown_whatsapp(texto: str) -> str:
     if not texto:
@@ -237,7 +261,7 @@ def sanitizar_markdown_whatsapp(texto: str) -> str:
     return re.sub(r'(?<!\*)\*([^\*\n]+)\*(?!\*)', r'**\1**', texto.replace("$", r"\$"))
 
 # =====================================================================
-# 3. SCHEMAS PYDANTIC (COM A REGRA DO "FAZ SENTIDO?")
+# 3. SCHEMAS PYDANTIC (COM GATILHO CONTEXTUAL SEM REPETIÇÃO)
 # =====================================================================
 class MatchEmpreendimento(BaseModel):
     codigo_imovel: str = Field(description="Código do imóvel (ex: 8212, CTBA-1650, CTBA-350, CTBA-101).")
@@ -259,12 +283,12 @@ class ExtracaoEscutaWhatsApp(BaseModel):
     proximo_passo_ou_agenda: str = Field(description="Próximo passo combinado.")
     imoveis_sugeridos_do_catalogo: List[MatchEmpreendimento] = Field(description="Imóveis recomendados do catálogo.")
     sugestao_proxima_resposta_corretor: str = Field(
-        description="Mensagem de WhatsApp elegante, consultiva e curta para a corretora enviar agora. OBRIGATÓRIO terminar com uma pergunta usando a expressão 'Faz sentido para você?' ou 'Faz sentido dentro do que você busca?'."
+        description="Mensagem de WhatsApp elegante, consultiva e curta para a corretora enviar agora. Finalize com uma pergunta consultiva natural como 'Faz sentido para você?'."
     )
 
 class AnaliseAtendimento(BaseModel):
     resposta_whatsapp: str = Field(
-        description="Mensagem para o cliente. OBRIGATÓRIO finalizar com uma pergunta consultiva usando 'Faz sentido para você?'."
+        description="Mensagem natural para o cliente. Use 'Faz sentido para você?' APENAS quando apresentar um imóvel novo. Se o cliente já concordou ('Sim', 'Faz', 'Claro'), PROIBIDO repetir 'Faz sentido': avance convidando para ver fotos ou agendar visita!"
     )
     imoveis_recomendados: List[str] = Field(description="Códigos recomendados.")
     temperatura_lead: str = Field(description="'QUENTE', 'MORNO', 'FRIO', 'CONGELADO' ou 'NEUTRO'.")
@@ -274,25 +298,29 @@ class AnaliseAtendimento(BaseModel):
 
 class MensagemReativacao(BaseModel):
     mensagem_personalizada: str = Field(
-        description="Mensagem de WhatsApp curta e natural apresentando o imóvel e finalizando obrigatoriamente com 'Faz sentido para você?' ou 'Faz sentido agendarmos uma visita?'."
+        description="Mensagem de WhatsApp curta e natural apresentando o imóvel e finalizando com 'Faz sentido para você?'."
     )
     motivo_do_match: str = Field(description="Explicação curta do match.")
 
 # =====================================================================
-# 4. DESIGN SYSTEM PREMIUM (MODO CLEAN SAAS + RESPONSIVIDADE MOBILE)
+# 4. DESIGN SYSTEM ENTERPRISE CRM + BOTÕES BOOTSTRAP REAIS
 # =====================================================================
-st.set_page_config(page_title="Pâmela Maioki | Smart CRM", page_icon="✨", layout="wide")
+st.set_page_config(page_title="ConvertaAI Pro | CRM Imobiliário", page_icon="🏢", layout="wide")
 
-if "db_iniciado_v6" not in st.session_state:
+if "db_iniciado_v7" not in st.session_state:
     inicializar_banco()
-    st.session_state.db_iniciado_v6 = True
+    st.session_state.db_iniciado_v7 = True
+
+if "aba_ativa" not in st.session_state:
+    st.session_state.aba_ativa = "KANBAN"
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background-color: #f1f5f9 !important;
     }
 
     #MainMenu {visibility: hidden;}
@@ -301,153 +329,275 @@ st.markdown("""
     .block-container {
         padding-top: 2.2rem !important;
         padding-bottom: 2rem !important;
-        max-width: 1280px !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        max-width: 1440px !important;
     }
 
-    .top-bar {
-        background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-        color: white;
-        padding: 18px 22px;
-        border-radius: 16px;
-        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);
-        margin-bottom: 18px;
+    /* TOPBAR ENTERPRISE */
+    .crm-navbar {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-bottom: 3px solid #2563eb;
+        border-radius: 12px;
+        padding: 12px 20px;
+        margin-bottom: 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
         flex-wrap: wrap;
         gap: 10px;
     }
-    .top-bar-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin: 0;
-        letter-spacing: -0.02em;
-        color: #ffffff !important;
+    .crm-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
-    .top-bar-sub {
-        font-size: 0.82rem;
-        opacity: 0.92;
-        margin: 2px 0 0 0;
-        color: #e2e8f0 !important;
-    }
-    .status-pill {
-        background: rgba(255, 255, 255, 0.18);
-        backdrop-filter: blur(6px);
-        padding: 6px 14px;
-        border-radius: 99px;
-        font-size: 0.78rem;
-        font-weight: 600;
+    .crm-logo-box {
+        background: #2563eb;
         color: #ffffff;
-        border: 1px solid rgba(255,255,255,0.25);
+        font-weight: 800;
+        font-size: 0.95rem;
+        padding: 7px 11px;
+        border-radius: 8px;
+        letter-spacing: -0.03em;
+    }
+    .crm-brand-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+    .crm-brand-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin: 0;
+    }
+    .crm-user-area {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .crm-badge-online {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 0.74rem;
+        font-weight: 600;
+    }
+    .crm-avatar {
+        background: #1e293b;
+        color: #ffffff;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        font-weight: 700;
     }
 
-    .clean-card {
+    /* FAIXA DE KPIs EXECUTIVOS */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .kpi-box {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-        color: #0f172a;
-    }
-    .clean-card-match {
-        background: #f8fafc;
         border: 1px solid #cbd5e1;
-        border-left: 4px solid #2563eb;
-        border-radius: 12px;
-        padding: 12px 14px;
-        margin-bottom: 10px;
+        border-top: 3px solid #2563eb;
+        border-radius: 10px;
+        padding: 10px 14px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    }
+    .kpi-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+    .kpi-val {
+        font-size: 1.15rem;
+        font-weight: 700;
         color: #0f172a;
     }
-
-    .banner-atraso {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-left: 5px solid #dc2626;
-        color: #991b1b;
-        padding: 12px 16px;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        font-size: 0.88rem;
-    }
-    .banner-permuta {
-        background: #fffbeb;
-        border: 1px solid #fde68a;
-        border-left: 5px solid #d97706;
-        color: #92400e;
-        padding: 10px 14px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        font-size: 0.84rem;
-    }
-
-    .pill-gray {
-        background: #f1f5f9;
-        color: #334155;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 0.76rem;
+    .kpi-sub {
+        font-size: 0.72rem;
+        color: #10b981;
         font-weight: 500;
-        display: inline-block;
-        margin: 2px 4px 2px 0;
-    }
-    .pill-blue {
-        background: #eff6ff;
-        color: #1d4ed8;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 0.76rem;
-        font-weight: 600;
-        display: inline-block;
-        margin: 2px 4px 2px 0;
-    }
-    .pill-red {
-        background: #fef2f2;
-        color: #b91c1c;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 0.76rem;
-        font-weight: 600;
-        display: inline-block;
-        margin: 2px 4px 2px 0;
     }
 
-    button[data-baseweb="tab"] {
-        border-radius: 10px !important;
-        padding: 8px 14px !important;
-        margin-right: 4px !important;
-    }
-    button[data-baseweb="tab"] p {
-        font-weight: 600 !important;
-        font-size: 0.86rem !important;
-    }
-
+    /* BOTÕES RETANGULARES DELIMITADOS (ESTILO BOOTSTRAP) */
     .stButton > button {
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         font-weight: 600 !important;
+        font-size: 0.84rem !important;
+        padding: 0.55rem 0.75rem !important;
+        border: 1px solid #94a3b8 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
         transition: all 0.15s ease-in-out !important;
     }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #1e3a8a !important;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28) !important;
+    }
+    .stButton > button[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background-color: #e2e8f0 !important;
+        border-color: #64748b !important;
+    }
 
-    /* Responsividade Mobile Refinada (Sem cortar o topo!) */
+    /* CABEÇALHO DE COLUNA DO KANBAN */
+    .kanban-col-header {
+        background: #e2e8f0;
+        border: 1px solid #cbd5e1;
+        border-top: 3px solid #2563eb;
+        border-radius: 10px 10px 6px 6px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+    }
+    .kanban-col-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .kanban-col-count {
+        background: #ffffff;
+        color: #0f172a;
+        padding: 1px 8px;
+        border-radius: 99px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .kanban-col-vgv {
+        font-size: 0.73rem;
+        color: #475569;
+        font-weight: 600;
+        margin-top: 3px;
+    }
+
+    /* CARTÃO DE LEAD PROFISSIONAL */
+    .deal-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04);
+    }
+    .deal-title {
+        font-size: 0.90rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+    .deal-meta {
+        font-size: 0.73rem;
+        color: #64748b;
+        margin: 3px 0 8px 0;
+    }
+    .deal-price-badge {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        display: inline-block;
+        margin-right: 4px;
+        margin-bottom: 4px;
+    }
+    .deal-loc-badge {
+        background: #f8fafc;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 0.73rem;
+        font-weight: 500;
+        display: inline-block;
+        margin-right: 4px;
+        margin-bottom: 4px;
+    }
+    .deal-forbid-badge {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 4px;
+    }
+    .deal-permuta-box {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        padding: 5px 8px;
+        border-radius: 6px;
+        font-size: 0.73rem;
+        font-weight: 600;
+        margin: 5px 0;
+    }
+    .deal-Origin-footer {
+        border-top: 1px solid #f1f5f9;
+        margin-top: 8px;
+        padding-top: 6px;
+        font-size: 0.71rem;
+        color: #64748b;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* WORKSPACE INBOX (AGORA COM MARGEM INFERIOR GENEROSA PARA NÃO COLAR NOS BOTÕES) */
+    .inbox-panel {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    }
+
     @media (max-width: 768px) {
         .block-container {
-            padding-top: 3.4rem !important;
-            padding-left: 0.7rem !important;
-            padding-right: 0.7rem !important;
+            padding-top: 3.3rem !important;
+            padding-left: 0.6rem !important;
+            padding-right: 0.6rem !important;
         }
-        .top-bar {
-            padding: 14px 16px;
-            border-radius: 12px;
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
         }
-        .top-bar-title {
-            font-size: 1.05rem;
+        .crm-navbar {
+            padding: 10px 12px;
         }
-        h2, h3, h5 {
-            font-size: 0.98rem !important;
+        .crm-brand-title {
+            font-size: 0.92rem;
         }
         .stButton > button {
-            font-size: 0.80rem !important;
-            padding: 0.45rem 0.6rem !important;
+            padding: 0.5rem 0.5rem !important;
             white-space: normal !important;
             height: auto !important;
         }
@@ -472,16 +622,17 @@ def obter_chave_api() -> str:
     return os.environ.get("GEMINI_API_KEY") or CHAVE_EMBARCADA
 
 with st.sidebar:
-    st.markdown("### 👤 Perfil da Corretora")
-    st.caption("**Pâmela Maioki** • Curitiba / PR")
+    st.markdown("### 🏢 Paulo Celles Imóveis")
+    st.caption("Unidade Curitiba • Corretora: **Pâmela Maioki**")
     chave_auto = obter_chave_api()
     if chave_auto and chave_auto != "COLE_SUA_CHAVE_AIzaSy_AQUI":
         api_key_input = chave_auto
-        st.success("🟢 WhatsApp Espelhado Ativo")
+        st.success("🟢 API & WhatsApp Sincronizados")
     else:
         api_key_input = st.text_input("🔑 Chave da API:", type="password")
     modelo_selecionado = "gemini-3.5-flash-lite"
-    if st.button("🔄 Restaurar Exemplos", use_container_width=True):
+    st.divider()
+    if st.button("🔄 Restaurar Base de Demonstração", use_container_width=True):
         if os.path.exists(DB_FILE):
             os.remove(DB_FILE)
         inicializar_banco()
@@ -489,7 +640,7 @@ with st.sidebar:
         st.rerun()
 
 # =====================================================================
-# 5. MOTOR DE IA (COM GATILHO "FAZ SENTIDO?" EMBARCADO)
+# 5. MOTOR DE IA (COM GATILHO CONTEXTUAL INTELIGENTE)
 # =====================================================================
 def chamar_gemini_estruturado(conteudos, schema_pydantic, system_prompt: str, chave_api: str, modelo_primario: str):
     if not chave_api:
@@ -516,169 +667,114 @@ def chamar_gemini_estruturado(conteudos, schema_pydantic, system_prompt: str, ch
 def analisar_conversa_whatsapp_espelhada(dialogo_texto: str, arquivo_audio, chave_api: str, modelo_primario: str) -> tuple[ExtracaoEscutaWhatsApp, str]:
     catalogo_json = json.dumps(carregar_imoveis(), ensure_ascii=False)
     prompt_sistema = f"""
-    Você é o assistente invisível de CRM da corretora Pâmela Maioki.
+    Você é o motor de inteligência comercial do CRM da corretora Pâmela Maioki.
     Analise a conversa ou áudio do WhatsApp e preencha o CRM sozinho.
     REGRAS CRÍTICAS:
     1. Detecte oportunidades de Permuta ou Captação/Angariação da casa atual do cliente (ex: 2.2M).
     2. Anote bairros rejeitados (ex: Cristo Rei) em `bairros_descartados` e nunca recomende imóveis lá.
-    3. REGRA DE OURO DE FECHAMENTO DA PÂMELA: Na `sugestao_proxima_resposta_corretor`, escreva uma mensagem super natural de WhatsApp apresentando a solução e SEMPRE termine com uma frase consultiva usando **"Faz sentido para você?"** (ex: "Faz sentido agendarmos uma visita rápida para você conhecer?", "Faz sentido essa configuração para a sua família?").
+    3. Na `sugestao_proxima_resposta_corretor`, escreva uma mensagem elegante de WhatsApp apresentando a solução e feche com uma pergunta consultiva como "Faz sentido para você?".
     CATÁLOGO: {catalogo_json}
     """
     partes = []
     if arquivo_audio is not None:
         partes.append(types.Part.from_bytes(data=arquivo_audio.read(), mime_type=arquivo_audio.type or "audio/ogg"))
-        partes.append(types.Part.from_text(text="Extraia os dados deste áudio e gere a resposta terminando com 'Faz sentido?'."))
+        partes.append(types.Part.from_text(text="Extraia os dados deste áudio e gere a ficha completa."))
     if dialogo_texto.strip():
         partes.append(types.Part.from_text(text=f"Conversa:\n{dialogo_texto}"))
-    return chamar_gemini_estruturado(partes, ExtracaoEscutaWhatsApp, prompt_sistema, chave_api, modelo_primario)
+    return chamar_gemini_estruturado(partes, ExtracaoEscutaWhatsApp, prompt_sistema, chave_api, modelo_selecionado)
 
 # =====================================================================
-# 6. CABEÇALHO CLEAN E NAVEGAÇÃO
+# 6. TOPBAR EXECUTIVA, KPIs E BARRA DE MENUS RETANGULARES (BOOTSTRAP)
 # =====================================================================
+leads_atuais = carregar_leads()
+vgv_total_pipeline = sum((l["orcamento_max"] or 0) for l in leads_atuais)
+qtd_visitas = sum(1 for l in leads_atuais if (l.get("coluna_kanban") == "VISITA" or l.get("temperatura") == "QUENTE"))
+qtd_atrasados = sum(1 for l in leads_atuais if "ATRASADO" in (l.get("data_retorno") or ""))
+
 st.markdown(
-    "<div class='top-bar'>"
-    "<div>"
-    "<p class='top-bar-title'>Olá, Pâmela Maioki 👋</p>"
-    "<p class='top-bar-sub'>Seu Copiloto & Funil Automático • Paulo Celles Imóveis</p>"
-    "</div>"
-    "<div class='status-pill'>🟢 WhatsApp Conectado • Tempo Resposta: 2s</div>"
-    "</div>",
+    f"<div class='crm-navbar'>"
+    f"<div class='crm-brand'>"
+    f"<div class='crm-logo-box'>C+ AI</div>"
+    f"<div>"
+    f"<p class='crm-brand-title'>ConvertaAI Pro • Gestão de Funil & Escuta WhatsApp</p>"
+    f"<p class='crm-brand-sub'>Paulo Celles Imóveis • Carteira: Pâmela Maioki</p>"
+    f"</div>"
+    f"</div>"
+    f"<div class='crm-user-area'>"
+    f"<span class='crm-badge-online'>● Roleta Ativa • SLA 1ª Resp: 2s</span>"
+    f"<span class='crm-avatar'>PM</span>"
+    f"</div>"
+    f"</div>"
+    f"<div class='kpi-grid'>"
+    f"<div class='kpi-box' style='border-top-color:#2563eb;'>"
+    f"<div class='kpi-label'>Negócios no Funil</div>"
+    f"<div class='kpi-val'>{len(leads_atuais)} leads</div>"
+    f"<div class='kpi-sub'>100% capturados s/ digitação</div>"
+    f"</div>"
+    f"<div class='kpi-box' style='border-top-color:#10b981;'>"
+    f"<div class='kpi-label'>VGV em Negociação</div>"
+    f"<div class='kpi-val'>{formatar_vgv_curto(vgv_total_pipeline)}</div>"
+    f"<div class='kpi-sub'>Soma dos tetos qualificados</div>"
+    f"</div>"
+    f"<div class='kpi-box' style='border-top-color:#f59e0b;'>"
+    f"<div class='kpi-label'>Oportunidade Captação</div>"
+    f"<div class='kpi-val'>R$ 2,20M</div>"
+    f"<div class='kpi-sub'>1 permuta/venda identificada</div>"
+    f"</div>"
+    f"<div class='kpi-box' style='border-top-color:#ef4444;'>"
+    f"<div class='kpi-label'>Retornos / Visitas</div>"
+    f"<div class='kpi-val'>{qtd_visitas} quentes • {qtd_atrasados} alerta</div>"
+    f"<div class='kpi-sub'>Monitoramento anti-roleta (30d)</div>"
+    f"</div>"
+    f"</div>",
     unsafe_allow_html=True
 )
 
-aba_escuta, aba_kanban, aba_chat, aba_match, aba_roi = st.tabs([
-    "✨ 1. Auto-CRM",
-    "📋 2. Seu Funil",
-    "💬 3. Super-Dory",
+# BARRA DE NAVEGAÇÃO RETANGULAR NATIVA (ESTILO BOOTSTRAP BTN-GROUP / NAV-PILLS)
+m1, m2, m3, m4 = st.columns(4, gap="small")
+if m1.button(
+    "📋 1. Funil Kanban",
+    type="primary" if st.session_state.aba_ativa == "KANBAN" else "secondary",
+    use_container_width=True
+):
+    st.session_state.aba_ativa = "KANBAN"
+    st.rerun()
+
+if m2.button(
+    "🎧 2. Inbox Auto-CRM",
+    type="primary" if st.session_state.aba_ativa == "INBOX" else "secondary",
+    use_container_width=True
+):
+    st.session_state.aba_ativa = "INBOX"
+    st.rerun()
+
+if m3.button(
+    "🤖 3. Super-Dory 24/7",
+    type="primary" if st.session_state.aba_ativa == "DORY" else "secondary",
+    use_container_width=True
+):
+    st.session_state.aba_ativa = "DORY"
+    st.rerun()
+
+if m4.button(
     "🎯 4. Match Carteira",
-    "📊 5. Seu Dia"
-])
+    type="primary" if st.session_state.aba_ativa == "MATCH" else "secondary",
+    use_container_width=True
+):
+    st.session_state.aba_ativa = "MATCH"
+    st.rerun()
+
+st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------
-# ABA 1: AUTO-CRM CLEAN (HTML BLINDADO SEM RECUO)
+# ABA 1: FUNIL KANBAN PADRÃO PIPEDRIVE / CONVERTA+
 # ---------------------------------------------------------------------
-with aba_escuta:
-    col_in, col_out = st.columns([1, 1.15], gap="large")
-
-    with col_in:
-        st.markdown("##### 📱 Conversa ou Áudio Recebido no WhatsApp")
-        st.caption("Toque em um atendimento real abaixo para testar:")
-        
-        c1, c2, c3 = st.columns(3)
-        if c1.button("🏡 Ana Rosset (2.2M)", use_container_width=True):
-            st.session_state.dialogo_wpp = (
-                "Cliente: Ana Rosset | Tel: (41) 99111-2233\n"
-                "[Pâmela]: Oi Ana! Te enviei os vídeos do Gaia Cabral (ID 8212), 2Q a partir de R$ 922.700 e 3Q R$ 1.136.400.\n"
-                "[Ana Rosset]: Tenho uma casa nova em condomínio avaliada em 2.6 mi, vou anunciar por 2.2 mi. Pedi pra Especiale excluir o anúncio de locação pois queremos vender. Teria que ver se aceitam permuta por 2 aptos de 3 quartos ou esperar vender.\n"
-                "[Pâmela]: Vamos colocar sua casa à venda aqui na Paulo Celles? Também saiu lançamento no Cristo Rei.\n"
-                "[Ana Rosset]: Ainda não vendi minha casa. Não desejo bairro Cristo Rei."
-            )
-        if c2.button("🎙️ Áudio (1.8M Dez)", use_container_width=True):
-            st.session_state.dialogo_wpp = (
-                "Cliente: Comprador Alto Padrão | Tel: (41) 99888-5544\n"
-                "[Áudio no WhatsApp]: Oi Pâmela, boa noite! Tô em busca de comprar algo até dezembro. O que eu busco tá entre 1 milhão e meio e 1 milhão e 800 no máximo, tá bom? Se tiver dentro disso pode me mandar."
-            )
-        if c3.button("💬 Rafael (3Q FGTS)", use_container_width=True):
-            st.session_state.dialogo_wpp = (
-                "Cliente: Rafael Souza | Tel: (41) 99234-5678\n"
-                "[Pâmela]: Oi Rafael! Te mandei o Hera Botânica (ID 8094) de 2 quartos.\n"
-                "[Rafael]: Oi Pâmela! 2 quartos fica apertado. Precisamos de 3 quartos até R$ 800 mil no Água Verde usando nosso FGTS."
-            )
-
-        dialogo_input = st.text_area(
-            "Histórico capturado:",
-            value=st.session_state.get("dialogo_wpp", ""),
-            height=155,
-            label_visibility="collapsed",
-            placeholder="Toque em um dos clientes acima ou cole uma conversa..."
-        )
-        audio_escuta = st.file_uploader("🎙️ Ou envie o áudio do cliente (.ogg, .mp3):", type=["ogg", "mp3", "wav"])
-
-        if st.button("✨ Atualizar Ficha & Gerar Resposta", type="primary", use_container_width=True):
-            if not dialogo_input.strip() and audio_escuta is None:
-                st.warning("Selecione um dos exemplos acima primeiro.")
-            else:
-                with st.spinner("Montando card e preparando mensagem..."):
-                    try:
-                        dados_escuta, _ = analisar_conversa_whatsapp_espelhada(dialogo_input, audio_escuta, api_key_input, modelo_selecionado)
-                        st.session_state.ultima_escuta = dados_escuta
-                        salvar_lead_escuta_whatsapp(dados_escuta)
-                        st.toast("Card atualizado no Funil!", icon="✅")
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
-
-    with col_out:
-        st.markdown("##### 🗂️ Card do Cliente (Preenchido Sozinho)")
-        if "ultima_escuta" in st.session_state and st.session_state.ultima_escuta:
-            esc: ExtracaoEscutaWhatsApp = st.session_state.ultima_escuta
-            
-            permuta_html = ""
-            if esc.possui_imovel_permuta_ou_venda and esc.possui_imovel_permuta_ou_venda.lower() not in ["não", "nao", "nenhum", "null", "none", "não possui"]:
-                permuta_html = f"<div class='banner-permuta'>🔄 <strong>Oportunidade de Permuta / Angariação:</strong> {esc.possui_imovel_permuta_ou_venda}</div>"
-
-            proibidos_html = ""
-            if esc.bairros_descartados:
-                proibidos_html = f"<span class='pill-red'>🚫 Não oferecer: {', '.join(esc.bairros_descartados)}</span>"
-
-            mostrados_html = "".join([f"<span class='pill-gray'>👁️ Já viu: {m}</span>" for m in esc.imoveis_ja_mostrados_pelo_corretor])
-            bairros_busca = ", ".join(esc.bairros_interesse) if esc.bairros_interesse else "Aberto"
-
-            html_ficha_aba1 = (
-                f"<div class='clean-card'>"
-                f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>"
-                f"<span style='font-size:1.05rem; font-weight:700;'>👤 {esc.nome_cliente}</span>"
-                f"{badge_temperatura(esc.temperatura_lead)}"
-                f"</div>"
-                f"<div style='font-size:0.80rem; color:#64748b; margin-bottom:10px;'>"
-                f"📱 {esc.telefone_cliente} &nbsp;•&nbsp; ⏳ <strong>{esc.prazo_urgencia_compra}</strong> &nbsp;•&nbsp; 📌 Funil: <strong>{esc.coluna_kanban_automatica}</strong>"
-                f"</div>"
-                f"{permuta_html}"
-                f"<div style='margin-bottom:8px;'>"
-                f"<span class='pill-blue'>💰 Teto: {formatar_moeda_br(esc.orcamento_identificado)}</span>"
-                f"<span class='pill-blue'>📍 Busca: {bairros_busca}</span>"
-                f"{proibidos_html}"
-                f"</div>"
-                f"<div style='margin-bottom:10px;'>{mostrados_html}</div>"
-                f"<div style='background:#f8fafc; padding:10px 12px; border-radius:10px; font-size:0.84rem; color:#334155;'>"
-                f"📝 <strong>Resumo:</strong> {esc.resumo_do_que_conversaram}"
-                f"</div>"
-                f"</div>"
-            )
-            st.markdown(html_ficha_aba1, unsafe_allow_html=True)
-
-            imoveis_cat = carregar_imoveis()
-            for sug in esc.imoveis_sugeridos_do_catalogo:
-                im_d = next((i for i in imoveis_cat if i["codigo"] == sug.codigo_imovel), None)
-                tit = f"{im_d['titulo']} ({formatar_moeda_br(im_d['valor'])})" if im_d else sug.codigo_imovel
-                html_sug = (
-                    f"<div class='clean-card-match'>"
-                    f"<strong>🎯 Sugestão da IA: ID {sug.codigo_imovel} — {tit}</strong>"
-                    f"<span style='float:right; color:#2563eb; font-weight:700; font-size:0.80rem;'>{sug.compatibilidade_percentual}% Match</span><br>"
-                    f"<span style='font-size:0.82rem; color:#475569;'>💡 {sug.motivo_para_mostrar_agora}</span>"
-                    f"</div>"
-                )
-                st.markdown(html_sug, unsafe_allow_html=True)
-
-            st.markdown("**📲 Mensagem Pronta c/ Gatilho *'Faz sentido?'* (Toque para copiar):**")
-            st.code(esc.sugestao_proxima_resposta_corretor, language=None)
-        else:
-            st.markdown(
-                "<div class='clean-card' style='text-align:center; padding:28px 16px; color:#64748b;'>"
-                "👈 Toque em <strong>🏡 Ana Rosset (2.2M)</strong> ou <strong>🎙️ Áudio (1.8M Dez)</strong> e clique no botão azul para ver o card limpo e a resposta com o gatilho <em>'Faz sentido?'</em>."
-                "</div>",
-                unsafe_allow_html=True
-            )
-
-# ---------------------------------------------------------------------
-# ABA 2: FUNIL KANBAN CLEAN (HTML BLINDADO SEM CAIXAS DE CÓDIGO)
-# ---------------------------------------------------------------------
-with aba_kanban:
-    leads_totais = carregar_leads()
+if st.session_state.aba_ativa == "KANBAN":
     agora_dt = datetime.now()
     col_novos, col_atendimento, col_reengajar, col_visita = [], [], [], []
     retornos_vencidos = []
 
-    for l in leads_totais:
+    for l in leads_atuais:
         try:
             dt_lead = datetime.strptime(l["ultima_interacao"], "%Y-%m-%d %H:%M")
             dias_parado = int((agora_dt - dt_lead).total_seconds() // 86400)
@@ -702,94 +798,240 @@ with aba_kanban:
     if retornos_vencidos:
         nomes_v = ", ".join([f"{r['nome']} ({r['data_retorno']})" for r in retornos_vencidos])
         st.markdown(
-            f"<div class='banner-atraso'>🔔 <strong>Lembrete de Retornos Pendentes:</strong> {nomes_v}</div>",
+            f"<div style='background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; color:#991b1b; padding:9px 14px; border-radius:8px; margin-bottom:12px; font-size:0.82rem;'>"
+            f"🔔 <strong>Atenção na Agenda:</strong> Você possui retorno(s) vencido(s) que o CRM tradicional não notificou: <strong>{nomes_v}</strong>"
+            f"</div>",
             unsafe_allow_html=True
         )
 
-    k1, k2, k3, k4 = st.columns(4, gap="medium")
+    k1, k2, k3, k4 = st.columns(4, gap="small")
 
-    def desenhar_card_kanban(item: dict):
-        proib = f"<span class='pill-red'>🚫 {item['bairros_descartados']}</span>" if item.get("bairros_descartados") not in [None, "", "Nenhum"] else ""
-        perm = f"<div style='font-size:0.75rem; color:#b45309; background:#fef3c7; padding:5px 8px; border-radius:6px; margin:5px 0;'>🔄 {item['oportunidade_permuta_captacao']}</div>" if item.get("oportunidade_permuta_captacao") not in [None, "", "Não possui", "Compra direta"] else ""
+    def renderizar_header_coluna(titulo: str, lista_leads: list, cor_topo: str):
+        soma_vgv = sum((x["orcamento_max"] or 0) for x in lista_leads)
+        st.markdown(
+            f"<div class='kanban-col-header' style='border-top-color:{cor_topo};'>"
+            f"<div class='kanban-col-title'><span>{titulo}</span><span class='kanban-col-count'>{len(lista_leads)}</span></div>"
+            f"<div class='kanban-col-vgv'>Potencial da etapa: {formatar_vgv_curto(soma_vgv)}</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+    def desenhar_card_enterprise(item: dict):
+        cor_esq = cor_borda_temperatura(item["temperatura"])
+        proib = f"<span class='deal-forbid-badge'>🚫 {item['bairros_descartados']}</span>" if item.get("bairros_descartados") not in [None, "", "Nenhum"] else ""
+        perm = f"<div class='deal-permuta-box'>🔄 Angariação/Permuta: {item['oportunidade_permuta_captacao']}</div>" if item.get("oportunidade_permuta_captacao") not in [None, "", "Não possui", "Compra direta"] else ""
         
         html_card = (
-            f"<div class='clean-card' style='padding:14px;'>"
-            f"<div style='display:flex; justify-content:space-between; align-items:center;'>"
-            f"<strong style='font-size:0.95rem;'>{item['nome']}</strong>"
+            f"<div class='deal-card' style='border-left: 4px solid {cor_esq};'>"
+            f"<div style='display:flex; justify-content:space-between; align-items:flex-start; gap:4px;'>"
+            f"<p class='deal-title'>{item['nome']}</p>"
             f"{badge_temperatura(item['temperatura'])}"
             f"</div>"
-            f"<div style='font-size:0.76rem; color:#64748b; margin:4px 0 8px 0;'>📱 {item['telefone']} • 📅 {item.get('data_retorno')}</div>"
-            f"<div style='margin-bottom:6px;'>"
-            f"<span class='pill-blue'>💰 {formatar_moeda_br(item['orcamento_max'])}</span>"
-            f"<span class='pill-gray'>📍 {item['bairros_interesse']}</span>"
+            f"<div class='deal-meta'>📞 {item['telefone']} • 🗓️ {item.get('data_retorno')}</div>"
+            f"<div>"
+            f"<span class='deal-price-badge'>{formatar_moeda_br(item['orcamento_max'])}</span>"
+            f"<span class='deal-loc-badge'>📍 {item['bairros_interesse']}</span>"
             f"{proib}"
             f"</div>"
             f"{perm}"
-            f"<div style='font-size:0.76rem; color:#334155; margin-top:6px; line-height:1.45;'>"
-            f"👁️ <strong>Viu:</strong> {item.get('imoveis_ja_mostrados')}<br>"
-            f"🎯 <strong>Sugerido:</strong> <span style='color:#1d4ed8; font-weight:600;'>{item.get('imoveis_sugeridos_ia')}</span>"
+            f"<div style='font-size:0.74rem; color:#334155; margin-top:6px; line-height:1.4;'>"
+            f"🏠 <strong>Apresentado:</strong> {item.get('imoveis_ja_mostrados')}<br>"
+            f"✨ <strong>Match IA:</strong> <span style='color:#1d4ed8; font-weight:600;'>{item.get('imoveis_sugeridos_ia')}</span>"
+            f"</div>"
+            f"<div class='deal-Origin-footer'>"
+            f"<span>🌐 {item.get('origem', 'WhatsApp')}</span>"
+            f"<span>🛡️ Roleta: {item['dias_para_perder']}d restantes</span>"
             f"</div>"
             f"</div>"
         )
         st.markdown(html_card, unsafe_allow_html=True)
 
     with k1:
-        st.markdown(f"##### 📥 Novos ({len(col_novos)})")
+        renderizar_header_coluna("1. Novos / Roleta", col_novos, "#3b82f6")
         for item in col_novos:
-            desenhar_card_kanban(item)
-            if st.button("Atender ➡️", key=f"k1_{item['id']}", use_container_width=True):
+            desenhar_card_enterprise(item)
+            if st.button("Iniciar Atendimento ➡️", key=f"k1_{item['id']}", use_container_width=True):
                 mover_card_kanban(item["id"], "ATENDIMENTO")
                 st.rerun()
 
     with k2:
-        st.markdown(f"##### 💬 Em Atendimento ({len(col_atendimento)})")
+        renderizar_header_coluna("2. Em Atendimento", col_atendimento, "#f59e0b")
         for item in col_atendimento:
-            desenhar_card_kanban(item)
+            desenhar_card_enterprise(item)
             b1, b2 = st.columns(2)
-            if b1.button("📅 Visita", key=f"k2v_{item['id']}", use_container_width=True):
+            if b1.button("📅 Agendar", key=f"k2v_{item['id']}", use_container_width=True):
                 mover_card_kanban(item["id"], "VISITA", "QUENTE")
                 st.rerun()
-            if b2.button("⏳ Atrasar", key=f"k2r_{item['id']}", use_container_width=True):
+            if b2.button("⏳ Pendente", key=f"k2r_{item['id']}", use_container_width=True):
                 mover_card_kanban(item["id"], "REENGAJAR", "FRIO")
                 st.rerun()
 
     with k3:
-        st.markdown(f"##### 🔄 Reengajar ({len(col_reengajar)})")
+        renderizar_header_coluna("3. Reengajar / Alerta", col_reengajar, "#ef4444")
         for item in col_reengajar:
-            desenhar_card_kanban(item)
-            st.caption(f"🛡️ Proteção Roleta: faltam **{item['dias_para_perder']} dias**")
-            if st.button("✨ Reengajar c/ IA", key=f"k3_{item['id']}", use_container_width=True):
+            desenhar_card_enterprise(item)
+            if st.button("⚡ Reengajar c/ IA", key=f"k3_{item['id']}", use_container_width=True):
                 mover_card_kanban(item["id"], "ATENDIMENTO", "MORNO")
                 st.rerun()
 
     with k4:
-        st.markdown(f"##### 🏆 Visita / Proposta ({len(col_visita)})")
+        renderizar_header_coluna("4. Visita / Proposta", col_visita, "#10b981")
         for item in col_visita:
-            desenhar_card_kanban(item)
-            if st.button("⏪ Voltar", key=f"k4_{item['id']}", use_container_width=True):
+            desenhar_card_enterprise(item)
+            if st.button("⏪ Retornar p/ Fila", key=f"k4_{item['id']}", use_container_width=True):
                 mover_card_kanban(item["id"], "ATENDIMENTO", "MORNO")
                 st.rerun()
 
 # ---------------------------------------------------------------------
-# ABA 3: SUPER-DORY (COM O "FAZ SENTIDO?")
+# ABA 2: WORKSPACE SPLIT-VIEW (INBOX WHATSAPP <-> INSPECTOR DO CRM)
 # ---------------------------------------------------------------------
-with aba_chat:
-    st.markdown("##### 💬 Pré-Atendimento Inteligente (Pivota Orçamento e finaliza com *'Faz sentido?'*)")
+elif st.session_state.aba_ativa == "INBOX":
+    col_in, col_out = st.columns([1.05, 1.15], gap="medium")
+
+    with col_in:
+        st.markdown(
+            "<div class='inbox-panel'>"
+            "<div style='font-weight:700; font-size:0.95rem; color:#0f172a; margin-bottom:4px;'>💬 Espelhamento WhatsApp Business (Escuta Passiva)</div>"
+            "<div style='font-size:0.80rem; color:#64748b;'>Selecione uma conversa ativa da corretora Pâmela abaixo ou envie um áudio recebido:</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
+        
+        c1, c2, c3 = st.columns(3, gap="small")
+        if c1.button("🏡 Ana Rosset (2.2M)", use_container_width=True):
+            st.session_state.dialogo_wpp = (
+                "Cliente: Ana Rosset | Tel: (41) 99111-2233\n"
+                "[Pâmela]: Oi Ana! Te enviei os vídeos do Gaia Cabral (ID 8212), 2Q a partir de R$ 922.700 e 3Q R$ 1.136.400.\n"
+                "[Ana Rosset]: Tenho uma casa nova em condomínio avaliada em 2.6 mi, vou anunciar por 2.2 mi. Pedi pra Especiale excluir o anúncio de locação pois queremos vender. Teria que ver se aceitam permuta por 2 aptos de 3 quartos ou esperar vender.\n"
+                "[Pâmela]: Vamos colocar sua casa à venda aqui na Paulo Celles? Também saiu lançamento no Cristo Rei.\n"
+                "[Ana Rosset]: Ainda não vendi minha casa. Não desejo bairro Cristo Rei."
+            )
+        if c2.button("🎙️ Áudio (1.8M Dez)", use_container_width=True):
+            st.session_state.dialogo_wpp = (
+                "Cliente: Comprador Alto Padrão | Tel: (41) 99888-5544\n"
+                "[Áudio no WhatsApp]: Oi Pâmela, boa noite! Tô em busca de comprar algo até dezembro. O que eu busco tá entre 1 milhão e meio e 1 milhão e 800 no máximo, tá bom? Se tiver dentro disso pode me mandar."
+            )
+        if c3.button("💬 Rafael (3Q FGTS)", use_container_width=True):
+            st.session_state.dialogo_wpp = (
+                "Cliente: Rafael Souza | Tel: (41) 99234-5678\n"
+                "[Pâmela]: Oi Rafael! Te mandei o Hera Botânica (ID 8094) de 2 quartos.\n"
+                "[Rafael]: Oi Pâmela! 2 quartos fica apertado. Precisamos de 3 quartos até R$ 800 mil no Água Verde usando nosso FGTS."
+            )
+
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        dialogo_input = st.text_area(
+            "Conversa sincronizada:",
+            value=st.session_state.get("dialogo_wpp", ""),
+            height=150,
+            label_visibility="collapsed",
+            placeholder="Clique em um cliente acima ou cole a conversa do WhatsApp..."
+        )
+        audio_escuta = st.file_uploader("🎙️ Anexar nota de voz (.ogg, .mp3):", type=["ogg", "mp3", "wav"])
+
+        if st.button("⚡ Sincronizar Ficha no CRM & Sugerir Imóveis", type="primary", use_container_width=True):
+            if not dialogo_input.strip() and audio_escuta is None:
+                st.warning("Selecione um atendimento acima primeiro.")
+            else:
+                with st.spinner("Extraindo dados estruturados para o Funil..."):
+                    try:
+                        dados_escuta, _ = analisar_conversa_whatsapp_espelhada(dialogo_input, audio_escuta, api_key_input, modelo_selecionado)
+                        st.session_state.ultima_escuta = dados_escuta
+                        salvar_lead_escuta_whatsapp(dados_escuta)
+                        st.toast("Ficha sincronizada automaticamente no Kanban!", icon="✅")
+                    except Exception as e:
+                        st.error(f"Erro: {e}")
+
+    with col_out:
+        if "ultima_escuta" in st.session_state and st.session_state.ultima_escuta:
+            esc: ExtracaoEscutaWhatsApp = st.session_state.ultima_escuta
+            cor_esq = cor_borda_temperatura(esc.temperatura_lead)
+            
+            permuta_html = ""
+            if esc.possui_imovel_permuta_ou_venda and esc.possui_imovel_permuta_ou_venda.lower() not in ["não", "nao", "nenhum", "null", "none", "não possui"]:
+                permuta_html = f"<div class='deal-permuta-box'>🔄 <strong>Oportunidade de Captação / Permuta:</strong> {esc.possui_imovel_permuta_ou_venda}</div>"
+
+            proibidos_html = f"<span class='deal-forbid-badge'>🚫 Restrição: {', '.join(esc.bairros_descartados)}</span>" if esc.bairros_descartados else ""
+            mostrados_html = ", ".join(esc.imoveis_ja_mostrados_pelo_corretor) if esc.imoveis_ja_mostrados_pelo_corretor else "Nenhum"
+            bairros_busca = ", ".join(esc.bairros_interesse) if esc.bairros_interesse else "Aberto"
+
+            html_inspector = (
+                f"<div class='inbox-panel' style='border-top: 4px solid {cor_esq};'>"
+                f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;'>"
+                f"<span style='font-size:1.05rem; font-weight:700; color:#0f172a;'>🗂️ Ficha CRM: {esc.nome_cliente}</span>"
+                f"{badge_temperatura(esc.temperatura_lead)}"
+                f"</div>"
+                f"<div style='font-size:0.78rem; color:#64748b; margin-bottom:10px;'>"
+                f"📞 {esc.telefone_cliente} &nbsp;|&nbsp; ⏳ Prazo: <strong>{esc.prazo_urgencia_compra}</strong> &nbsp;|&nbsp; 📌 Etapa: <strong>{esc.coluna_kanban_automatica}</strong>"
+                f"</div>"
+                f"{permuta_html}"
+                f"<div style='margin-bottom:8px;'>"
+                f"<span class='deal-price-badge'>💰 Teto: {formatar_moeda_br(esc.orcamento_identificado)}</span>"
+                f"<span class='deal-loc-badge'>📍 Regiões: {bairros_busca}</span>"
+                f"{proibidos_html}"
+                f"</div>"
+                f"<div style='font-size:0.80rem; color:#334155; margin-bottom:8px;'>"
+                f"👁️ <strong>Imóveis já apresentados no chat:</strong> {mostrados_html}"
+                f"</div>"
+                f"<div style='background:#f8fafc; border:1px solid #e2e8f0; padding:9px 12px; border-radius:8px; font-size:0.81rem; color:#1e293b;'>"
+                f"📝 <strong> Síntese do Atendimento:</strong> {esc.resumo_do_que_conversaram}"
+                f"</div>"
+                f"</div>"
+            )
+            st.markdown(html_inspector, unsafe_allow_html=True)
+
+            imoveis_cat = carregar_imoveis()
+            for sug in esc.imoveis_sugeridos_do_catalogo:
+                im_d = next((i for i in imoveis_cat if i["codigo"] == sug.codigo_imovel), None)
+                tit = f"{im_d['titulo']} ({formatar_moeda_br(im_d['valor'])})" if im_d else sug.codigo_imovel
+                st.markdown(
+                    f"<div class='deal-card' style='border-left:4px solid #2563eb; margin-top:8px;'>"
+                    f"<strong>🎯 Recomendação do Estoque: ID {sug.codigo_imovel} — {tit}</strong>"
+                    f"<span style='float:right; color:#2563eb; font-weight:700; font-size:0.78rem;'>{sug.compatibilidade_percentual}% Match</span><br>"
+                    f"<span style='font-size:0.79rem; color:#475569;'>💡 {sug.motivo_para_mostrar_agora}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown("###### 📲 Script de Resposta Rápida (Clique no ícone de copiar no canto da caixa):")
+            st.code(esc.sugestao_proxima_resposta_corretor, language=None)
+        else:
+            st.markdown(
+                "<div class='inbox-panel' style='text-align:center; padding:36px 20px; color:#64748b;'>"
+                "<strong>🗂️ Inspector de Ficha Automática</strong><br><br>"
+                "Selecione um atendimento à esquerda (ex: <strong>🏡 Ana Rosset</strong> ou <strong>🎙️ Áudio 1.8M</strong>) e clique em <strong>Sincronizar Ficha</strong> para visualizar os campos extraídos automaticamente pela IA."
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+# ---------------------------------------------------------------------
+# ABA 3: SUPER-DORY (COM FECHAMENTO CONTEXTUAL SEM REPETIR FRASE!)
+# ---------------------------------------------------------------------
+elif st.session_state.aba_ativa == "DORY":
+    st.markdown(
+        "<div class='inbox-panel'>"
+        "<strong>🤖 Roleta 24/7 — Qualificação & Pivotagem de Orçamento (Evolução Dory)</strong><br>"
+        "<span style='font-size:0.79rem; color:#64748b;'>Quando o cliente clica em um anúncio caro (ex: ID 8094 de R$ 888 mil), mas informa orçamento de R$ 350 mil, a IA sugere na hora o imóvel compatível e avança para o agendamento sem repetir bordões.</span>"
+        "</div>",
+        unsafe_allow_html=True
+    )
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    cb1, cb2, cb3 = st.columns(3)
+    cb1, cb2, cb3 = st.columns(3, gap="small")
     msg_atalho = None
-    if cb1.button("1️⃣ Clicou no Hera (888k)", use_container_width=True):
+    if cb1.button("1️⃣ Cliente clica no Hera (888k)", use_container_width=True):
         msg_atalho = "Olá! Vi o anúncio do Hera Botânica (ID 8094) no Cristo Rei."
-    if cb2.button("2️⃣ 'Só tenho 350 mil'", use_container_width=True):
+    if cb2.button("2️⃣ Cliente diz: 'Só tenho 350 mil'", use_container_width=True):
         msg_atalho = "Será que compro algo bom em Curitiba? Eu tenho 350 mil."
-    if cb3.button("🧹 Limpar", use_container_width=True):
+    if cb3.button("🧹 Reiniciar Chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-    chat_box = st.container(height=340, border=True)
-    input_wpp = st.chat_input("Escreva como cliente...")
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    chat_box = st.container(height=330, border=True)
+    input_wpp = st.chat_input("Simule uma resposta do cliente (ex: 'Sim, faz sentido! Pode mandar as fotos')...")
     texto_enviado = msg_atalho or input_wpp
 
     with chat_box:
@@ -801,12 +1043,13 @@ with aba_chat:
             with st.chat_message("user"):
                 st.markdown(sanitizar_markdown_whatsapp(texto_enviado))
             with st.chat_message("assistant"):
-                with st.spinner("Respondendo..."):
+                with st.spinner("Consultando estoque..."):
                     catalogo_str = json.dumps(carregar_imoveis(), ensure_ascii=False)
                     sis_chat = (
-                        f"Você é a assistente da corretora Pâmela. Catálogo: {catalogo_str}. "
-                        "Se o cliente tiver orçamento menor (ex: 350 mil), ofereça o CTBA-350 (R$ 345 mil) na hora! "
-                        "SEMPRE finalize sua resposta com uma pergunta usando 'Faz sentido para você?'."
+                        f"Você é a assistente virtual da corretora Pâmela. Catálogo: {catalogo_str}. "
+                        "REGRAS DE CONVERSA NATURAL: "
+                        "1. Se o cliente tiver orçamento menor (ex: 350 mil), apresente o CTBA-350 (R$ 345 mil) e pergunte 'Faz sentido para você essa opção?'. "
+                        "2. PROIBIDO repetir 'Faz sentido para você?' se essa frase já apareceu no histórico anterior! Se o cliente disser 'Sim', 'Faz' ou concordar, convide-o diretamente para receber o vídeo do decorado ou agendar uma visita com a Pâmela."
                     )
                     conteudos = [types.Content(role="user" if m["role"]=="user" else "model", parts=[types.Part.from_text(text=m["content"])]) for m in st.session_state.messages]
                     analise_wpp, _ = chamar_gemini_estruturado(conteudos, AnaliseAtendimento, sis_chat, api_key_input, modelo_selecionado)
@@ -814,41 +1057,29 @@ with aba_chat:
                     st.session_state.messages.append({"role": "assistant", "content": analise_wpp.resposta_whatsapp})
 
 # ---------------------------------------------------------------------
-# ABA 4: MATCH DA CARTEIRA
+# ABA 4: CRUZAMENTO DE CARTEIRA (MATCH REVERSO)
 # ---------------------------------------------------------------------
-with aba_match:
-    st.markdown("##### 🎯 Cruzamento Inteligente de Lançamentos")
-    leads_s = carregar_leads()
+elif st.session_state.aba_ativa == "MATCH":
     imoveis_a = carregar_imoveis()
-    opcoes = {f"{im['titulo']} • {im['cidade_bairro']} ({formatar_moeda_br(im['valor'])})": im for im in imoveis_a}
-    escolha = st.selectbox("Selecione o Imóvel:", list(opcoes.keys()))
+    opcoes = {f"ID {im['codigo']} • {im['titulo']} ({im['cidade_bairro']} - {formatar_moeda_br(im['valor'])})": im for im in imoveis_a}
+    escolha = st.selectbox("🏢 Selecione o Empreendimento para filtrar compradores compatíveis na carteira:", list(opcoes.keys()))
     imovel_alvo = opcoes[escolha]
 
-    for lead_m in leads_s:
+    for lead_m in leads_atuais:
         descartados_lead = (lead_m.get("bairros_descartados") or "").lower()
         bairro_proibido = any(b.strip() in imovel_alvo["cidade_bairro"].lower() for b in descartados_lead.split(",") if len(b.strip()) > 2 and b.strip() != "nenhum")
         orc_ok = (lead_m["orcamento_max"] is None) or (lead_m["orcamento_max"] * 1.25 >= imovel_alvo["valor"] and lead_m["orcamento_max"] * 0.4 <= imovel_alvo["valor"])
         if orc_ok and not bairro_proibido:
-            html_match_card = (
-                f"<div class='clean-card'>"
-                f"<strong>👤 {lead_m['nome']}</strong> {badge_temperatura(lead_m['temperatura'])}<br>"
-                f"<span style='font-size:0.82rem; color:#475569;'>💰 Teto: {formatar_moeda_br(lead_m['orcamento_max'])} • 👁️ Já viu: {lead_m.get('imoveis_ja_mostrados')}</span>"
-                f"</div>"
+            cor_esq = cor_borda_temperatura(lead_m["temperatura"])
+            st.markdown(
+                f"<div class='deal-card' style='border-left:4px solid {cor_esq};'>"
+                f"<strong>👤 {lead_m['nome']} ({lead_m['telefone']})</strong> &nbsp;{badge_temperatura(lead_m['temperatura'])}<br>"
+                f"<span style='font-size:0.79rem; color:#475569;'>💰 Teto: <strong>{formatar_moeda_br(lead_m['orcamento_max'])}</strong> • 👁️ Histórico: {lead_m.get('imoveis_ja_mostrados')}</span>"
+                f"</div>",
+                unsafe_allow_html=True
             )
-            st.markdown(html_match_card, unsafe_allow_html=True)
-            if st.button(f"📲 Gerar abordagem p/ {lead_m['nome']}", key=f"m_{lead_m['id']}"):
-                p_sis = "Crie uma mensagem curta de WhatsApp ofertando este imóvel e termine obrigatoriamente perguntando 'Faz sentido para você?'."
+            if st.button(f"📲 Gerar Script de Abordagem p/ {lead_m['nome']}", key=f"m_{lead_m['id']}"):
+                p_sis = "Crie uma mensagem curta de WhatsApp ofertando este imóvel para o cliente com base no histórico dele."
                 p_usr = f"Cliente: {json.dumps(lead_m, ensure_ascii=False)} | Imóvel: {json.dumps(imovel_alvo, ensure_ascii=False)}"
                 res_m, _ = chamar_gemini_estruturado(p_usr, MensagemReativacao, p_sis, api_key_input, modelo_selecionado)
                 st.code(res_m.mensagem_personalizada, language=None)
-
-# ---------------------------------------------------------------------
-# ABA 5: SEU DIA & DASHBOARD
-# ---------------------------------------------------------------------
-with aba_roi:
-    leads_g = carregar_leads()
-    d1, d2, d3, d4 = st.columns(4)
-    d1.metric("Novos + Recontatos", f"{len(leads_g)} ativos", "+100% via WhatsApp")
-    d2.metric("Tempo 1ª Resposta", "2 seg", "-9.9 min vs antigo")
-    d3.metric("Captação / Permuta", "R$ 2,2 Mi", "Casa Ana Rosset")
-    d4.metric("Visitas / Quentes", f"{sum(1 for l in leads_g if l.get('coluna_kanban')=='VISITA')}", "Prontos p/ fechar")
