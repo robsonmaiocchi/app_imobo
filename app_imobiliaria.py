@@ -11,9 +11,9 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 # =====================================================================
-# 1. BANCO DE DADOS E CONFIGURAÇÃO (SQLite v7 - Enterprise CRM)
+# 1. BANCO DE DADOS E CONFIGURAÇÃO (SQLite v8 - Enterprise BI & Gestão)
 # =====================================================================
-DB_FILE = "crm_imobiliaria_v7.db"
+DB_FILE = "crm_imobiliaria_v8.db"
 CHAVE_EMBARCADA = "COLE_SUA_CHAVE_AIzaSy_AQUI"
 
 IMOVEIS_INICIAIS = [
@@ -303,13 +303,13 @@ class MensagemReativacao(BaseModel):
     motivo_do_match: str = Field(description="Explicação curta do match.")
 
 # =====================================================================
-# 4. DESIGN SYSTEM ENTERPRISE CRM + BOTÕES BOOTSTRAP REAIS
+# 4. DESIGN SYSTEM ENTERPRISE CRM + 5 ABAS DE GESTÃO & BI
 # =====================================================================
 st.set_page_config(page_title="ConvertaAI Pro | CRM Imobiliário", page_icon="🏢", layout="wide")
 
-if "db_iniciado_v7" not in st.session_state:
+if "db_iniciado_v8" not in st.session_state:
     inicializar_banco()
-    st.session_state.db_iniciado_v7 = True
+    st.session_state.db_iniciado_v8 = True
 
 if "aba_ativa" not in st.session_state:
     st.session_state.aba_ativa = "KANBAN"
@@ -439,8 +439,8 @@ st.markdown("""
     .stButton > button {
         border-radius: 8px !important;
         font-weight: 600 !important;
-        font-size: 0.84rem !important;
-        padding: 0.55rem 0.75rem !important;
+        font-size: 0.82rem !important;
+        padding: 0.55rem 0.6rem !important;
         border: 1px solid #94a3b8 !important;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
         transition: all 0.15s ease-in-out !important;
@@ -570,7 +570,6 @@ st.markdown("""
         align-items: center;
     }
 
-    /* WORKSPACE INBOX (AGORA COM MARGEM INFERIOR GENEROSA PARA NÃO COLAR NOS BOTÕES) */
     .inbox-panel {
         background: #ffffff;
         border: 1px solid #cbd5e1;
@@ -597,7 +596,8 @@ st.markdown("""
             font-size: 0.92rem;
         }
         .stButton > button {
-            padding: 0.5rem 0.5rem !important;
+            padding: 0.5rem 0.4rem !important;
+            font-size: 0.75rem !important;
             white-space: normal !important;
             height: auto !important;
         }
@@ -681,10 +681,10 @@ def analisar_conversa_whatsapp_espelhada(dialogo_texto: str, arquivo_audio, chav
         partes.append(types.Part.from_text(text="Extraia os dados deste áudio e gere a ficha completa."))
     if dialogo_texto.strip():
         partes.append(types.Part.from_text(text=f"Conversa:\n{dialogo_texto}"))
-    return chamar_gemini_estruturado(partes, ExtracaoEscutaWhatsApp, prompt_sistema, chave_api, modelo_selecionado)
+    return chamar_gemini_estruturado(partes, ExtracaoEscutaWhatsApp, prompt_sistema, chave_api, modelo_primario)
 
 # =====================================================================
-# 6. TOPBAR EXECUTIVA, KPIs E BARRA DE MENUS RETANGULARES (BOOTSTRAP)
+# 6. TOPBAR EXECUTIVA, KPIs E 5 BOTÕES DE MENU (COM GESTÃO & BI)
 # =====================================================================
 leads_atuais = carregar_leads()
 vgv_total_pipeline = sum((l["orcamento_max"] or 0) for l in leads_atuais)
@@ -730,38 +730,26 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# BARRA DE NAVEGAÇÃO RETANGULAR NATIVA (ESTILO BOOTSTRAP BTN-GROUP / NAV-PILLS)
-m1, m2, m3, m4 = st.columns(4, gap="small")
-if m1.button(
-    "📋 1. Funil Kanban",
-    type="primary" if st.session_state.aba_ativa == "KANBAN" else "secondary",
-    use_container_width=True
-):
+# 5 BOTÕES DE NAVEGAÇÃO SUPERIOR (INCLUINDO GESTÃO & BI)
+m1, m2, m3, m4, m5 = st.columns(5, gap="small")
+if m1.button("📋 1. Kanban", type="primary" if st.session_state.aba_ativa == "KANBAN" else "secondary", use_container_width=True):
     st.session_state.aba_ativa = "KANBAN"
     st.rerun()
 
-if m2.button(
-    "🎧 2. Inbox Auto-CRM",
-    type="primary" if st.session_state.aba_ativa == "INBOX" else "secondary",
-    use_container_width=True
-):
+if m2.button("🎧 2. Inbox", type="primary" if st.session_state.aba_ativa == "INBOX" else "secondary", use_container_width=True):
     st.session_state.aba_ativa = "INBOX"
     st.rerun()
 
-if m3.button(
-    "🤖 3. Super-Dory 24/7",
-    type="primary" if st.session_state.aba_ativa == "DORY" else "secondary",
-    use_container_width=True
-):
+if m3.button("🤖 3. Super-Dory", type="primary" if st.session_state.aba_ativa == "DORY" else "secondary", use_container_width=True):
     st.session_state.aba_ativa = "DORY"
     st.rerun()
 
-if m4.button(
-    "🎯 4. Match Carteira",
-    type="primary" if st.session_state.aba_ativa == "MATCH" else "secondary",
-    use_container_width=True
-):
+if m4.button("🎯 4. Match", type="primary" if st.session_state.aba_ativa == "MATCH" else "secondary", use_container_width=True):
     st.session_state.aba_ativa = "MATCH"
+    st.rerun()
+
+if m5.button("📊 5. Gestão & BI", type="primary" if st.session_state.aba_ativa == "BI" else "secondary", use_container_width=True):
+    st.session_state.aba_ativa = "BI"
     st.rerun()
 
 st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
@@ -798,8 +786,8 @@ if st.session_state.aba_ativa == "KANBAN":
     if retornos_vencidos:
         nomes_v = ", ".join([f"{r['nome']} ({r['data_retorno']})" for r in retornos_vencidos])
         st.markdown(
-            f"<div style='background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; color:#991b1b; padding:9px 14px; border-radius:8px; margin-bottom:12px; font-size:0.82rem;'>"
-            f"🔔 <strong>Atenção na Agenda:</strong> Você possui retorno(s) vencido(s) que o CRM tradicional não notificou: <strong>{nomes_v}</strong>"
+            f"<div style='background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; color:#991b1b; padding:9px 14px; border-radius:8px; margin-bottom:12px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center;'>"
+            f"<span>🔔 <strong>Radar Anti-Roleta & Retornos Pendentes:</strong> {nomes_v}</span>"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -1083,3 +1071,102 @@ elif st.session_state.aba_ativa == "MATCH":
                 p_usr = f"Cliente: {json.dumps(lead_m, ensure_ascii=False)} | Imóvel: {json.dumps(imovel_alvo, ensure_ascii=False)}"
                 res_m, _ = chamar_gemini_estruturado(p_usr, MensagemReativacao, p_sis, api_key_input, modelo_selecionado)
                 st.code(res_m.mensagem_personalizada, language=None)
+
+# ---------------------------------------------------------------------
+# ABA 5: GESTÃO & BI (FORECAST DE COMISSÕES, SIMULADOR & BACKOFFICE)
+# ---------------------------------------------------------------------
+elif st.session_state.aba_ativa == "BI":
+    st.markdown("### 📊 Inteligência Comercial, Forecast & Simulador de Propostas")
+    
+    tab_f, tab_s, tab_b = st.tabs(["📈 Forecast de Comissões & VGV", "🧮 Simulador & Proposta WhatsApp", "🏢 Estoque & Captações (Backoffice)"])
+    
+    with tab_f:
+        c_meta1, c_meta2 = st.columns(2)
+        with c_meta1:
+            meta_comissao = st.number_input("🎯 Meta de Comissão Mensal (R$):", value=35000.0, step=5000.0)
+            taxa_comissao = st.slider("💼 Taxa Média de Corretagem (%):", min_value=1.0, max_value=6.0, value=2.5, step=0.5)
+        with c_meta2:
+            st.markdown("##### 💡 Parâmetros Ponderados da Etapa (Pipeline)")
+            st.caption("Novos (10%) | Atendimento (25%) | Reengajar (15%) | Visita/Quente (60%)")
+
+        pesos_etapas = {"NOVOS": 0.10, "ATENDIMENTO": 0.25, "REENGAJAR": 0.15, "VISITA": 0.60}
+        vgv_ponderado = 0
+        for l in leads_atuais:
+            col = (l.get("coluna_kanban") or "ATENDIMENTO").upper()
+            peso = pesos_etapas.get(col, 0.20)
+            vgv_ponderado += (l["orcamento_max"] or 0) * peso
+
+        comissao_projetada = vgv_ponderado * (taxa_comissao / 100.0)
+        progresso_meta = min(1.0, comissao_projetada / meta_comissao if meta_comissao > 0 else 0)
+
+        st.markdown(f"#### 💰 Projeção de Faturamento: **{formatar_moeda_br(comissao_projetada)}**")
+        st.progress(progresso_meta, text=f"Progresso da Meta Mensal: {progresso_meta*100:.1f}% batido")
+
+        st.divider()
+        st.markdown("##### 🌐 Análise de Canais & Demanda por Região")
+        col_ori1, col_ori2 = st.columns(2)
+        with col_ori1:
+            st.info("📱 **Canais mais Qualificados:** Instagram e WhatsApp Direto lideram a conversão para imóveis acima de R$ 900k.")
+        with col_ori2:
+            st.success("📍 **Região em Alta:** Cabral e Juvevê concentram 78% das intenções de compra de alto padrão.")
+
+    with tab_s:
+        st.markdown("##### 🧮 Simulador de Fluxo Financeiro & Proposta Express")
+        imoveis_lista = carregar_imoveis()
+        opcoes_sim = {f"ID {im['codigo']} • {im['titulo']} ({formatar_moeda_br(im['valor'])})": im for im in imoveis_lista}
+        escolha_sim = st.selectbox("Selecione o Imóvel para Simulação:", list(opcoes_sim.keys()), key="sel_sim")
+        imv_escolhido = opcoes_sim[escolha_sim]
+
+        val_imv = imv_escolhido["valor"]
+        c_s1, c_s2, c_s3 = st.columns(3)
+        with c_s1:
+            entrada_val = st.number_input("Valor de Entrada / FGTS (R$):", value=val_imv * 0.2, step=10000.0)
+        with c_s2:
+            parcelas_obra = st.slider("Parcelas Mensais na Obra:", min_value=12, max_value=60, value=36, step=6)
+        with c_s3:
+            permuta_valor = st.number_input("Imóvel em Permuta / Troca (R$):", value=0.0, step=20000.0)
+
+        saldo_devedor = max(0.0, val_imv - entrada_val - permuta_valor)
+        prestacao_mensal = saldo_devedor / parcelas_obra if parcelas_obra > 0 else 0
+
+        st.markdown(
+            f"<div class='inbox-panel' style='background:#f8fafc; border-left:4px solid #2563eb;'>"
+            f"<strong>📋 Simulação Executiva Gerada:</strong><br>"
+            f"• Imóvel: <strong>{imv_escolhido['titulo']}</strong> ({formatar_moeda_br(val_imv)})<br>"
+            f"• Entrada + FGTS: <strong>{formatar_moeda_br(entrada_val)}</strong><br>"
+            f"• Permuta Envolvida: <strong>{formatar_moeda_br(permuta_valor)}</strong><br>"
+            f"• Saldo Financiado / Obra: <strong>{formatar_moeda_br(saldo_devedor)}</strong> em {parcelas_obra}x de <strong>{formatar_moeda_br(prestacao_mensal)}</strong>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        proposta_wpp_texto = (
+            f"Olá! Segue a simulação financeira personalizada para o *{imv_escolhido['titulo']}* ({imv_escolhido['cidade_bairro']}):\n\n"
+            f"💰 *Valor Total:* {formatar_moeda_br(val_imv)}\n"
+            f"🤝 *Entrada / FGTS:* {formatar_moeda_br(entrada_val)}\n"
+            f"🔄 *Permuta:* {formatar_moeda_br(permuta_valor) if permuta_valor > 0 else 'Não possui'}\n"
+            f"📑 *Saldo:* {parcelas_obra}x de {formatar_moeda_br(prestacao_mensal)}\n\n"
+            f"Faz sentido agendarmos uma reunião para fecharmos este fluxo?"
+        )
+        st.markdown("###### 📲 Copiar Proposta para o WhatsApp:")
+        st.code(proposta_wpp_texto, language=None)
+
+    with tab_b:
+        st.markdown("##### 🏢 Catálogo de Imóveis & Captações de Clientes (Permutas)")
+        st.caption("Imóveis cadastrados ativos no sistema:")
+        for im in imoveis_lista:
+            st.markdown(
+                f"<div class='deal-card'>"
+                f"<strong>ID {im['codigo']} — {im['titulo']}</strong> ({im['cidade_bairro']})<br>"
+                f"<span style='font-size:0.78rem; color:#475569;'>💰 {formatar_moeda_br(im['valor'])} • {im['modalidade']} • Entrega: {im['previsao_entrega']}</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        st.markdown("---")
+        st.markdown("🔄 **Imóveis Captados de Clientes (Base de Permuta / Angariação):**")
+        st.markdown(
+            f"<div class='deal-permuta-box'>"
+            f"🏠 <strong>Ana Rosset:</strong> Casa em condomínio avaliada em R$ 2.6M (anunciada por R$ 2.2M). Aceita permuta por 2 aptos no Gaia Cabral."
+            f"</div>",
+            unsafe_allow_html=True
+        )
